@@ -1,3 +1,7 @@
+// Copyright (c) Pepper Lebeck-Jobe, 2024
+// This file is licensed under the MIT License.
+// See the LICENSE.md file in the project root.
+
 // border-shimmer pulses border colors in configurable ways.
 //
 // Users must have the `borders` command installed.
