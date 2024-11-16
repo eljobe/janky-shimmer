@@ -8,7 +8,7 @@ contain an animated transition among a sequence of user-configurable colors.
 
 Here's what my custom configuration looks like:
 
-
+https://github.com/user-attachments/assets/ba665fa6-488c-4646-bd1e-02591d27de11
 
 **TODO(eljobe)**: Add instructions on building and runnig, or possibly a brew
   formula like that used by JankyBorders.
