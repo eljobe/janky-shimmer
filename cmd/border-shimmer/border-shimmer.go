@@ -21,28 +21,35 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+type BorderConfig struct {
+	Colors []string `toml:"colors"`
+	Secs   float64  `toml:"secs"`
+	FPS    float64  `toml:"fps"`
+	Width  float64  `toml:"width"`
+	Glow   bool     `toml:"glow"`
+}
+
 type Config struct {
-	Colors         []string `toml:"colors"`
-	InactiveColors []string `toml:"inactive_colors"`
-	Secs           float64  `toml:"secs"`
-	FPS            float64  `toml:"fps"`
-	Width          float64  `toml:"width"`
+	Active   BorderConfig `toml:"active"`
+	Inactive BorderConfig `toml:"inactive"`
 }
 
 func defaultConfig() Config {
 	return Config{
-		Colors: []string{
-			"#FF0000FF", // Red
-			"#FFA500FF", // Orange
-			"#FFFF00FF", // Yellow
-			"#008000FF", // Green
-			"#0000FFFF", // Blue
-			"#4B0082FF", // Indigo
+		Active: BorderConfig{
+			Colors: []string{
+				"#FF0000FF", // Red
+				"#FFA500FF", // Orange
+				"#FFFF00FF", // Yellow
+				"#008000FF", // Green
+				"#0000FFFF", // Blue
+				"#4B0082FF", // Indigo
+			},
+			Secs:  3.0,
+			FPS:   3.0,
+			Width: 5,
+			Glow:  false,
 		},
-		InactiveColors: []string{},
-		Secs:           3.0,
-		FPS:            3.0,
-		Width:          5,
 	}
 }
 
@@ -137,49 +144,52 @@ func main() {
 	}
 
 	// Override default config with config file settings
-	if len(fileConfig.Colors) > 0 {
-		cfg.Colors = fileConfig.Colors
+	if len(fileConfig.Active.Colors) > 0 {
+		cfg.Active.Colors = fileConfig.Active.Colors
 	}
-	if len(fileConfig.InactiveColors) > 0 {
-		cfg.InactiveColors = fileConfig.InactiveColors
+	if len(fileConfig.Inactive.Colors) > 0 {
+		cfg.Inactive.Colors = fileConfig.Inactive.Colors
 	}
-	if fileConfig.Secs > 0 {
-		cfg.Secs = fileConfig.Secs
+	if fileConfig.Active.Secs > 0 {
+		cfg.Active.Secs = fileConfig.Active.Secs
 	}
-	if fileConfig.FPS > 0 {
-		cfg.FPS = fileConfig.FPS
+	if fileConfig.Active.FPS > 0 {
+		cfg.Active.FPS = fileConfig.Active.FPS
 	}
-	if fileConfig.Width > 0 {
-		cfg.Width = fileConfig.Width
+	if fileConfig.Active.Width > 0 {
+		cfg.Active.Width = fileConfig.Active.Width
+	}
+	if fileConfig.Active.Glow {
+		cfg.Active.Glow = fileConfig.Active.Glow
 	}
 
 	// Override config with command-line flags
 	if *colorsFlag != "" {
-		cfg.Colors = strings.Split(*colorsFlag, ",")
+		cfg.Active.Colors = strings.Split(*colorsFlag, ",")
 	}
 	if *inactiveColorsFlag != "" {
-		cfg.InactiveColors = strings.Split(*inactiveColorsFlag, ",")
+		cfg.Inactive.Colors = strings.Split(*inactiveColorsFlag, ",")
 	}
 	if *secsFlag > 0 {
-		cfg.Secs = *secsFlag
+		cfg.Active.Secs = *secsFlag
 	}
 	if *fpsFlag > 0 {
-		cfg.FPS = *fpsFlag
+		cfg.Active.FPS = *fpsFlag
 	}
 	if *widthFlag > 0 {
-		cfg.Width = *widthFlag
+		cfg.Active.Width = *widthFlag
 	}
 
 	// Parse colors
-	colors, err := parseColors(cfg.Colors)
+	colors, err := parseColors(cfg.Active.Colors)
 	if err != nil {
 		fmt.Printf("Error parsing colors: %v\n", err)
 		os.Exit(1)
 	}
 
 	var inactiveColors []color.RGBA
-	if len(cfg.InactiveColors) > 0 {
-		inactiveColors, err = parseColors(cfg.InactiveColors)
+	if len(cfg.Inactive.Colors) > 0 {
+		inactiveColors, err = parseColors(cfg.Inactive.Colors)
 		if err != nil {
 			fmt.Printf("Error parsing inactive colors: %v\n", err)
 			os.Exit(1)
@@ -195,8 +205,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	stepsPerTransition := int(cfg.Secs * cfg.FPS)
-	delay := time.Duration(1.0 / cfg.FPS * float64(time.Second))
+	stepsPerTransition := int(cfg.Active.Secs * cfg.Active.FPS)
+	delay := time.Duration(1.0 / cfg.Active.FPS * float64(time.Second))
 
 	for {
 		for i := 0; i < len(colors); i++ {
@@ -210,15 +220,21 @@ func main() {
 				t := float64(step) / float64(stepsPerTransition)
 				interpolatedActiveColor := interpolateColor(currentActiveColor, nextActiveColor, t)
 				activeColorHex := colorToHex(interpolatedActiveColor)
+				if cfg.Active.Glow {
+					activeColorHex = "glow(" + activeColorHex + ")"
+				}
 
 				interpolatedInactiveColor := interpolateColor(currentInactiveColor, nextInactiveColor, t)
 				inactiveColorHex := colorToHex(interpolatedInactiveColor)
+				if cfg.Inactive.Glow {
+					inactiveColorHex = "glow(" + inactiveColorHex + ")"
+				}
 
 				binary := "borders"
 				argMap := map[string]string{
-					"active_color":   "glow(" + activeColorHex + ")",
+					"active_color":   activeColorHex,
 					"inactive_color": inactiveColorHex,
-					"width":          fmt.Sprintf("%f", cfg.Width),
+					"width":          fmt.Sprintf("%f", cfg.Active.Width),
 				}
 				var args []string
 				for k, v := range argMap {
